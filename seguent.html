@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Simulació Escola Epidemiològica</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700&family=Syne:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #00ff88;
+    --infected: #ff2d55;
+    --recovered: #00d9ff;
+    --bridge: #ffd600;
+    --bridge-infected: #ff8c00;
+    --bg-dark: #0a0e27;
+    --bg-mid: #111a3a;
+    --bg-light: #1a2847;
+    --border: #2a3f7f;
+    --text-primary: #e8f0ff;
+    --text-secondary: #a0b4e8;
+    --accent: #00ff88;
+}
+
+body {
+    margin: 0;
+    background: linear-gradient(135deg, var(--bg-dark) 0%, var(--bg-mid) 50%, var(--bg-dark) 100%);
+    color: var(--text-primary);
+    font-family: 'Inter', sans-serif;
+    text-align: center;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: 
+        radial-gradient(circle at 20% 50%, rgba(0, 255, 136, 0.03) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(0, 217, 255, 0.03) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+h1 {
+    margin: 0;
+    padding: 40px 20px 20px;
+    font-family: 'Syne', sans-serif;
+    font-size: 2.8rem;
+    font-weight: 700;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--accent), var(--recovered));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: titlePulse 3s ease-in-out infinite;
+}
+
+@keyframes titlePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    padding-bottom: 10px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+canvas {
+    background: 
+        linear-gradient(135deg, rgba(10, 14, 39, 0.9), rgba(17, 26, 58, 0.9)),
+        repeating-linear-gradient(
+            90deg,
+            transparent,
+            transparent 2px,
+            rgba(0, 255, 136, 0.02) 2px,
+            rgba(0, 255, 136, 0.02) 4px
+        );
+    border: 3px solid var(--border);
+    border-radius: 16px;
+    margin: 30px auto;
+    display: block;
+    box-shadow: 
+        0 0 60px rgba(0, 255, 136, 0.2),
+        0 0 120px rgba(0, 217, 255, 0.1),
+        inset 0 0 40px rgba(0, 255, 136, 0.08),
+        inset 0 0 80px rgba(0, 217, 255, 0.04);
+    transition: all 0.3s ease;
+    filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.1));
+}
+
+canvas:hover {
+    box-shadow: 
+        0 0 80px rgba(0, 255, 136, 0.3),
+        0 0 150px rgba(0, 217, 255, 0.15),
+        inset 0 0 50px rgba(0, 255, 136, 0.12),
+        inset 0 0 100px rgba(0, 217, 255, 0.06);
+    filter: drop-shadow(0 0 30px rgba(0, 255, 136, 0.2));
+}
+
+.top-toolbar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+    align-items: start;
+    max-width: 1400px;
+    margin: 0 auto 18px;
+    padding: 0 20px;
+}
+
+.screen-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+    max-width: 1400px;
+    margin: 0 auto 24px;
+    padding: 0 20px;
+}
+
+.controls-aside {
+    display: grid;
+    gap: 16px;
+}
+
+.canvas-layout {
+    width: 100%;
+}
+
+.canvas-wrapper {
+    background: linear-gradient(135deg, rgba(10, 14, 39, 0.85), rgba(17, 26, 58, 0.95));
+    border-radius: 18px;
+    padding: 14px;
+    border: 1px solid rgba(0, 255, 136, 0.12);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+}
+
+.simulation-panel {
+    position: sticky;
+    top: 24px;
+}
+
+.editor-block {
+    margin-top: 18px;
+}
+
+.panel {
+    background: linear-gradient(135deg, rgba(26, 40, 71, 0.6), rgba(42, 63, 127, 0.4));
+    backdrop-filter: blur(10px);
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    animation: slideInUp 0.6s ease-out;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.panel:hover {
+    background: linear-gradient(135deg, rgba(26, 40, 71, 0.8), rgba(42, 63, 127, 0.6));
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(0, 255, 136, 0.1);
+    transform: translateY(-4px);
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 6px 0;
+    font-size: 0.90rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+label br {
+    display: none;
+}
+
+input {
+    width: 65px;
+    padding: 6px 10px;
+    background: rgba(10, 14, 39, 0.5);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+}
+
+input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 12px rgba(0, 255, 136, 0.3);
+    background: rgba(10, 14, 39, 0.8);
+}
+
+button {
+    padding: 8px 16px;
+    margin-top: 8px;
+    margin-bottom: 0;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--accent), #00cc70);
+    color: var(--bg-dark);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.90rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 255, 136, 0.2);
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
+    background: linear-gradient(135deg, #00ff99, #00dd7f);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.legend {
+    margin: 30px 0;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(26, 40, 71, 0.4), rgba(42, 63, 127, 0.2));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 30px;
+    animation: fadeInDown 0.6s ease-out;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.legend span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+}
+
+.legend span:hover {
+    color: var(--text-primary);
+    transform: scale(1.05);
+}
+
+.legend-color {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 3px;
+    box-shadow: 0 0 8px currentColor;
+}
+
+/* Colores de leyenda */
+.color-susceptible { background: var(--primary); }
+.color-infected { background: var(--infected); }
+.color-recovered { background: var(--recovered); }
+.color-bridge { background: var(--bridge); }
+.color-bridge-infected { background: var(--bridge-infected); }
+
+.stat-block {
+    margin-top: 14px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(0, 255, 136, 0.08);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.4;
+    border: 1px solid rgba(0, 255, 136, 0.15);
+}
+
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2rem;
+        padding: 30px 15px 15px;
+    }
+
+    .screen-layout {
+        grid-template-columns: 1fr;
+        gap: 18px;
+        padding: 0 14px;
+    }
+
+    .controls-aside {
+        gap: 14px;
+    }
+
+    .simulation-panel {
+        position: static;
+    }
+
+    .panel {
+        min-width: 100%;
+    }
+
+    .legend {
+        gap: 15px;
+    }
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Simulació d'una Epidèmia a l'institut</h1>
+
+<div class="container">
+
+<div class="legend">
+    <span>
+        <span class="legend-color color-susceptible"></span>
+        Susceptible
+    </span>
+    <span>
+        <span class="legend-color color-infected"></span>
+        Infectat
+    </span>
+    <span>
+        <span class="legend-color color-recovered"></span>
+        Recuperat
+    </span>
+    <span>
+        <span class="legend-color color-bridge"></span>
+        Persona Pont
+    </span>
+    <span>
+        <span class="legend-color color-bridge-infected"></span>
+        Persona Pont Infectada
+    </span>
+</div>
+
+<div class="top-toolbar">
+    <div class="panel">
+        <h3>Configuració</h3>
+
+        <label>
+            Classes X:
+            <input type="number"
+            id="classesXInput"
+            value="4">
+        </label>
+
+        <label>
+            Classes Y:
+            <input type="number"
+            id="classesYInput"
+            value="4">
+        </label>
+
+        <label>
+            Amplada classe:
+            <input type="number"
+            id="classWidthInput"
+            value="6">
+        </label>
+
+        <label>
+            Alçada classe:
+            <input type="number"
+            id="classHeightInput"
+            value="5">
+        </label>
+
+        <label>
+            Infectats inicials:
+            <input type="number"
+            id="infectedInput"
+            value="5">
+        </label>
+
+        <label>
+            Persones pont:
+            <input type="number"
+            id="bridgeInput"
+            value="8">
+        </label>
+
+        <label>
+            Radi persones pont:
+            <input type="number"
+            id="bridgeRadiusInput"
+            value="8">
+        </label>
+
+        <label>
+            Probabilitat infecció:
+            <input type="number"
+            step="0.01"
+            id="infectionInput"
+            value="0.25">
+        </label>
+
+        <label>
+            Temps recuperació:
+            <input type="number"
+            id="recoveryInput"
+            value="40">
+        </label>
+
+        <label>
+            Velocitat(ms):
+            <input type="number"
+            id="speedInput"
+            value="120">
+        </label>
+
+        <button onclick="applySettings()">
+            Aplicar Configuració
+        </button>
+    </div>
+
+    <div class="panel">
+        <h3>Mesures Seguretat</h3>
+
+        <label>
+            Mascaretes (%):
+            <input type="number"
+            id="maskInput"
+            value="50">
+        </label>
+
+        <label>
+            Patis Variats (%):
+            <input type="number"
+            id="patiInput"
+            value="30">
+        </label>
+
+        <label>
+            Ventilació (%):
+            <input type="number"
+            id="ventilationInput"
+            value="40">
+        </label>
+
+        <label>
+            Higiene (%):
+            <input type="number"
+            id="hygieneInput"
+            value="20">
+        </label>
+    </div>
+</div>
+
+<div class="screen-layout">
+    <aside class="controls-aside">
+        <div class="panel simulation-panel">
+            <h3>Simulació</h3>
+
+            <button onclick="toggleSimulation()">
+                Play / Pause
+            </button>
+
+            <button onclick="resetSimulation()">
+                Reiniciar
+            </button>
+
+            <div class="stat-block" id="infectionProbabilityDisplay">
+                <strong>Probabilitat d'infecció:</strong>
+                <div id="infectionInfo">Base 25% · Ajustada 25%</div>
+            </div>
+
+            <div class="panel editor-block">
+                <h3>Editor</h3>
+
+                <button onclick="setPaintMode('susceptible')">
+                    Susceptible
+                </button>
+
+                <button onclick="setPaintMode('infected')">
+                    Infectat
+                </button>
+
+                <button onclick="setPaintMode('recovered')">
+                    Recuperat
+                </button>
+
+                <button onclick="setPaintMode('bridge')">
+                    Persona Pont
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <main class="canvas-layout">
+        <div class="canvas-wrapper">
+            <canvas id="canvas"></canvas>
+        </div>
+    </main>
+</div>
+
+    </div>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let cellSize = 25;
+
+// Color palette
+const colors = {
+    susceptible: "#00ff88",
+    infected: "#ff2d55",
+    recovered: "#00d9ff",
+    bridge: "#ffd600",
+    bridgeInfected: "#ff8c00"
+};
+
+// ------------------------
+// CONFIGURACIÓ
+// ------------------------
+
+let classesX = 4;
+let classesY = 4;
+
+let classroomWidth = 6;
+let classroomHeight = 5;
+
+let cols;
+let rows;
+
+let running = false;
+
+let infectionChance = 0.25;
+
+let recoveryTime = 40;
+
+let speed = 120;
+
+let initialInfected = 5;
+
+let bridgePeople = 5;
+
+let bridgeRadius = 3;
+
+// SEGURETAT
+
+let maskEffect = 50;
+
+let patiEffect = 30;
+
+let ventilationEffect = 40;
+
+let hygieneEffect = 20;
+
+let paintMode = "infected";
+
+let grid = [];
+
+// Grid animation
+let animationFrame = 0;
+let cellGlowMap = {};  // Track glow intensity for each cell
+
+// Initialize glow map
+function initializeGlowMap() {
+    cellGlowMap = {};
+    for(let y = 0; y < rows; y++) {
+        for(let x = 0; x < cols; x++) {
+            cellGlowMap[`${x},${y}`] = 0;
+        }
+    }
+}
+
+// ------------------------
+// ACTUALITZAR GRAELLA
+// ------------------------
+
+function updateGridSize(){
+
+    cols = classroomWidth * classesX;
+
+    rows = classroomHeight * classesY;
+
+    canvas.width = cols * cellSize;
+
+    canvas.height = rows * cellSize;
+}
+
+// ------------------------
+// CREAR GRAELLA
+// ------------------------
+
+function createGrid(){
+
+    grid = [];
+    initializeGlowMap();
+
+    for(let y=0;y<rows;y++){
+
+        let row = [];
+
+        for(let x=0;x<cols;x++){
+
+            row.push({
+                state:"susceptible",
+                infectionTime:0,
+                bridge:false,
+                attemptedNeighbors: []
+            });
+        }
+
+        grid.push(row);
+    }
+
+    // PERSONES PONT
+
+    for(let i=0;i<bridgePeople;i++){
+
+        const rx =
+        Math.floor(Math.random()*cols);
+
+        const ry =
+        Math.floor(Math.random()*rows);
+
+        grid[ry][rx].bridge = true;
+    }
+
+    // INFECTATS INICIALS
+
+    for(let i=0;i<initialInfected;i++){
+
+        const rx =
+        Math.floor(Math.random()*cols);
+
+        const ry =
+        Math.floor(Math.random()*rows);
+
+        grid[ry][rx].state = "infected";
+    }
+}
+
+// ------------------------
+// DIBUIXAR
+// ------------------------
+
+function drawGrid(){
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    // Draw atmospheric background grid
+    drawBackgroundGrid();
+
+    // Draw cells with enhanced visuals
+    for(let y=0;y<rows;y++){
+
+        for(let x=0;x<cols;x++){
+
+            const cell = grid[y][x];
+            const x0 = x * cellSize;
+            const y0 = y * cellSize;
+
+            // Determine color
+            let cellColor = colors.susceptible;
+            
+            if(cell.state==="infected"){
+                cellColor = colors.infected;
+            }
+            else if(cell.state==="recovered"){
+                cellColor = colors.recovered;
+            }
+
+            // Bridge people
+            if(cell.bridge){
+                if(cell.state==="infected"){
+                    cellColor = colors.bridgeInfected;
+                }
+                else{
+                    cellColor = colors.bridge;
+                }
+            }
+
+            // Draw cell with gradient and border
+            drawStyledCell(x0, y0, cellColor, cell);
+        }
+    }
+
+    // Draw grid lines with gradient effect
+    drawClassrooms();
+    updateInfectionInfo();
+    animationFrame++;
+}
+
+// Draw individual cells as stylized people
+function drawStyledCell(x, y, color, cell) {
+    const centerX = x + cellSize / 2;
+    const centerY = y + cellSize / 2;
+    
+    // Subtle background cell
+    const bgGradient = ctx.createLinearGradient(x, y, x + cellSize, y + cellSize);
+    bgGradient.addColorStop(0, "rgba(255, 255, 255, 0.02)");
+    bgGradient.addColorStop(1, "rgba(0, 0, 0, 0.05)");
+    ctx.fillStyle = bgGradient;
+    ctx.fillRect(x + 0.5, y + 0.5, cellSize - 2, cellSize - 2);
+    
+    // Draw person
+    drawPerson(centerX, centerY, color, cell);
+}
+
+// Draw a stylized person
+function drawPerson(centerX, centerY, color, cell) {
+    const bobbing = Math.sin(animationFrame * 0.04 + centerX * 0.01) * 1.5;
+    const sway = Math.cos(animationFrame * 0.03 + centerY * 0.01) * 0.8;
+    
+    const headRadius = 3.5;
+    const bodyWidth = 2.5;
+    const bodyHeight = 5;
+    
+    // Save context for transformations
+    ctx.save();
+    ctx.translate(centerX + sway, centerY + bobbing);
+    
+    // Draw aura/health indicator background
+    drawAura(0, 0, color, cell);
+    
+    // Head
+    ctx.fillStyle = color + "ff";
+    ctx.beginPath();
+    ctx.arc(0, -5.5, headRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Head highlight
+    ctx.fillStyle = color + "40";
+    ctx.beginPath();
+    ctx.arc(-1.2, -6.8, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw expression based on state
+    drawExpression(0, -5.5, color, cell);
+    
+    // Body
+    const bodyGradient = ctx.createLinearGradient(0, -2, 0, 4);
+    bodyGradient.addColorStop(0, color + "ff");
+    bodyGradient.addColorStop(1, color + "dd");
+    ctx.fillStyle = bodyGradient;
+    ctx.fillRect(-bodyWidth/2, -2, bodyWidth, bodyHeight);
+    
+    // Body border
+    ctx.strokeStyle = color + "80";
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(-bodyWidth/2, -2, bodyWidth, bodyHeight);
+    
+    // Left arm
+    ctx.strokeStyle = color + "ff";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(-bodyWidth/2, -0.5);
+    const armSwing = Math.sin(animationFrame * 0.06 + 2) * 2;
+    ctx.lineTo(-4 + armSwing, 0.5);
+    ctx.stroke();
+    
+    // Right arm
+    ctx.beginPath();
+    ctx.moveTo(bodyWidth/2, -0.5);
+    const armSwing2 = Math.sin(animationFrame * 0.06) * 2;
+    ctx.lineTo(4 + armSwing2, 0.5);
+    ctx.stroke();
+    
+    // Left leg
+    ctx.beginPath();
+    ctx.moveTo(-bodyWidth/2 + 0.5, 3);
+    ctx.lineTo(-1.5, 7);
+    ctx.stroke();
+    
+    // Right leg
+    ctx.beginPath();
+    ctx.moveTo(bodyWidth/2 - 0.5, 3);
+    ctx.lineTo(1.5, 7);
+    ctx.stroke();
+    
+    ctx.restore();
+}
+
+// Draw expression based on health state
+function drawExpression(headX, headY, color, cell) {
+    ctx.save();
+    ctx.translate(headX, headY);
+    
+    if (cell.state === "infected") {
+        // Sad/sick expression
+        ctx.fillStyle = color + "ff";
+        // Eyes
+        ctx.beginPath();
+        ctx.arc(-1.2, -1, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(1.2, -1, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Sad mouth
+        ctx.strokeStyle = color + "ff";
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.arc(0, 1, 1.2, Math.PI * 0.2, Math.PI * 0.8);
+        ctx.stroke();
+    } 
+    else if (cell.state === "recovered") {
+        // Happy expression
+        ctx.fillStyle = color + "ff";
+        // Eyes
+        ctx.beginPath();
+        ctx.arc(-1.2, -1, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(1.2, -1, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Happy mouth
+        ctx.strokeStyle = color + "ff";
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.arc(0, 1.2, 1.2, -Math.PI * 0.8, -Math.PI * 0.2);
+        ctx.stroke();
+    }
+    else {
+        // Neutral expression
+        ctx.fillStyle = color + "dd";
+        // Eyes
+        ctx.beginPath();
+        ctx.arc(-1.2, -1, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(1.2, -1, 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Neutral mouth
+        ctx.strokeStyle = color + "aa";
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-0.8, 1);
+        ctx.lineTo(0.8, 1);
+        ctx.stroke();
+    }
+    
+    ctx.restore();
+}
+
+// Draw health aura around person
+function drawAura(x, y, color, cell) {
+    if (cell.state === "infected") {
+        // Fever/danger aura
+        const pulse = 0.5 + 0.3 * Math.sin(animationFrame * 0.08);
+        ctx.fillStyle = color + Math.floor(pulse * 40).toString(16).padStart(2, '0');
+        ctx.beginPath();
+        ctx.arc(x, y, 7 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+    } 
+    else if (cell.state === "recovered") {
+        // Healing aura
+        const glow = 0.3 + 0.2 * Math.sin(animationFrame * 0.05);
+        ctx.strokeStyle = color + Math.floor(glow * 150).toString(16).padStart(2, '0');
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 8, 0, Math.PI * 2);
+        ctx.stroke();
+    }
+}
+
+// Atmospheric background grid
+function drawBackgroundGrid() {
+    // Subtle scanlines effect
+    ctx.fillStyle = "rgba(0, 255, 136, 0.01)";
+    for(let i = 0; i < rows; i++) {
+        ctx.fillRect(0, i * cellSize, canvas.width, 1);
+    }
+}
+
+// Enhanced grid lines with gradient effect
+function drawClassrooms(){
+
+    // Primary grid lines - stronger
+    for(let x = 0; x <= cols; x += classroomWidth) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        gradient.addColorStop(0, "rgba(0, 255, 136, 0)");
+        gradient.addColorStop(0.2, "rgba(42, 63, 127, 0.8)");
+        gradient.addColorStop(0.5, "rgba(42, 63, 127, 1)");
+        gradient.addColorStop(0.8, "rgba(42, 63, 127, 0.8)");
+        gradient.addColorStop(1, "rgba(0, 255, 136, 0)");
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(x * cellSize, 0);
+        ctx.lineTo(x * cellSize, canvas.height);
+        ctx.stroke();
+    }
+
+    for(let y = 0; y <= rows; y += classroomHeight) {
+        const gradient = ctx.createLinearGradient(0, 0, canvas.width, 0);
+        gradient.addColorStop(0, "rgba(0, 255, 136, 0)");
+        gradient.addColorStop(0.2, "rgba(42, 63, 127, 0.8)");
+        gradient.addColorStop(0.5, "rgba(42, 63, 127, 1)");
+        gradient.addColorStop(0.8, "rgba(42, 63, 127, 0.8)");
+        gradient.addColorStop(1, "rgba(0, 255, 136, 0)");
+        
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(0, y * cellSize);
+        ctx.lineTo(canvas.width, y * cellSize);
+        ctx.stroke();
+    }
+
+    // Secondary grid lines - subtle diagonal glow
+    const glowIntensity = 0.2 + 0.1 * Math.sin(animationFrame * 0.03);
+    ctx.strokeStyle = `rgba(0, 255, 136, ${glowIntensity * 0.3})`;
+    ctx.lineWidth = 1;
+    
+    for(let x = 0; x <= cols; x += classroomWidth) {
+        ctx.beginPath();
+        ctx.moveTo(x * cellSize - 1, 0);
+        ctx.lineTo(x * cellSize - 1, canvas.height);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(x * cellSize + 1, 0);
+        ctx.lineTo(x * cellSize + 1, canvas.height);
+        ctx.stroke();
+    }
+
+    for(let y = 0; y <= rows; y += classroomHeight) {
+        ctx.beginPath();
+        ctx.moveTo(0, y * cellSize - 1);
+        ctx.lineTo(canvas.width, y * cellSize - 1);
+        ctx.stroke();
+        
+        ctx.beginPath();
+        ctx.moveTo(0, y * cellSize + 1);
+        ctx.lineTo(canvas.width, y * cellSize + 1);
+        ctx.stroke();
+    }
+}
+
+// ------------------------
+// PROPAGACIÓ
+// ------------------------
+
+function spreadInfection(){
+
+    let newGrid = structuredClone(grid);
+
+    for(let y=0;y<rows;y++){
+
+        for(let x=0;x<cols;x++){
+
+            const cell = grid[y][x];
+            const newCell = newGrid[y][x];
+
+            if(cell.state==="infected"){
+
+                // TEMPS INFECCIÓ
+
+                newCell.infectionTime++;
+
+                // RECUPERACIÓ
+
+                if(
+                    newCell.infectionTime
+                    >=
+                    recoveryTime
+                ){
+
+                    newCell.state =
+                    "recovered";
+                }
+
+                // ESCANEJAR VEÏNS ADJACENTS
+
+                const neighborOffsets = [
+                    [-1, -1],
+                    [-1, 0],
+                    [-1, 1],
+                    [0, -1],
+                    [0, 1],
+                    [1, -1],
+                    [1, 0],
+                    [1, 1]
+                ];
+
+                if(!Array.isArray(newCell.attemptedNeighbors)){
+                    newCell.attemptedNeighbors = [];
+                }
+
+                for(const [dy, dx] of neighborOffsets){
+                    const neighborKey = `${dx},${dy}`;
+                    if(newCell.attemptedNeighbors.includes(neighborKey)){
+                        continue;
+                    }
+
+                    const ny = y + dy;
+                    const nx = x + dx;
+
+                    if(ny < 0 || ny >= rows || nx < 0 || nx >= cols){
+                        continue;
+                    }
+
+                    newCell.attemptedNeighbors.push(neighborKey);
+
+                    const target = grid[ny][nx];
+                    if(target.state !== "susceptible"){
+                        continue;
+                    }
+
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    let canSpread = false;
+
+                    if(cell.bridge){
+                        if(distance <= bridgeRadius){
+                            canSpread = true;
+                        }
+                    }
+                    else {
+                        const sameClassroom =
+                            Math.floor(nx/classroomWidth) === Math.floor(x/classroomWidth)
+                            &&
+                            Math.floor(ny/classroomHeight) === Math.floor(y/classroomHeight);
+
+                        if(sameClassroom && distance <= 1.5){
+                            canSpread = true;
+                        }
+                    }
+
+                    if(!canSpread){
+                        continue;
+                    }
+
+                    // ----------------
+                    // SEGURETAT
+                    // ----------------
+
+                    let finalProbability = infectionChance;
+
+                    // mascaretes
+                    finalProbability *= (
+                        1 -
+                        (maskEffect/100)
+                        *0.5
+                    );
+
+                    // distància
+                    finalProbability *= (
+                        1 -
+                        (patiEffect/100)
+                        *0.4
+                    );
+
+                    // ventilació
+                    finalProbability *= (
+                        1 -
+                        (ventilationEffect/100)
+                        *0.3
+                    );
+
+                    // higiene
+                    finalProbability *= (
+                        1 -
+                        (hygieneEffect/100)
+                        *0.2
+                    );
+
+                    if(finalProbability < 0){
+                        finalProbability = 0;
+                    }
+
+                    if(Math.random() < finalProbability){
+                        newGrid[ny][nx].state = "infected";
+                        newGrid[ny][nx].infectionTime = 0;
+                        newGrid[ny][nx].attemptedNeighbors = [];
+                    }
+                }
+            }
+        }
+    }
+
+    grid = newGrid;
+}
+
+function calculateEffectiveInfectionProbability() {
+    let finalProbability = infectionChance;
+    finalProbability *= 1 - (maskEffect / 100) * 0.5;
+    finalProbability *= 1 - (patiEffect / 100) * 0.4;
+    finalProbability *= 1 - (ventilationEffect / 100) * 0.3;
+    finalProbability *= 1 - (hygieneEffect / 100) * 0.2;
+    return Math.max(0, finalProbability);
+}
+
+function updateInfectionInfo() {
+    const info = document.getElementById("infectionInfo");
+    if (!info) return;
+    const adjusted = calculateEffectiveInfectionProbability();
+    info.textContent = `Base ${Math.round(infectionChance * 100)}% · Ajustada ${Math.round(adjusted * 100)}%`;
+}
+
+// ------------------------
+// LOOP
+// ------------------------
+
+function loop(){
+
+    if(running){
+
+        spreadInfection();
+
+        drawGrid();
+    }
+
+    setTimeout(()=>{
+
+        requestAnimationFrame(loop);
+
+    },speed);
+}
+
+// ------------------------
+// CONTROLS
+// ------------------------
+
+function toggleSimulation(){
+
+    running = !running;
+}
+
+function resetSimulation(){
+
+    updateGridSize();
+
+    createGrid();
+
+    drawGrid();
+}
+
+function applySettings(){
+
+    classesX = parseInt(
+        document.getElementById(
+            "classesXInput"
+        ).value
+    );
+
+    classesY = parseInt(
+        document.getElementById(
+            "classesYInput"
+        ).value
+    );
+
+    classroomWidth = parseInt(
+        document.getElementById(
+            "classWidthInput"
+        ).value
+    );
+
+    classroomHeight = parseInt(
+        document.getElementById(
+            "classHeightInput"
+        ).value
+    );
+
+    initialInfected = parseInt(
+        document.getElementById(
+            "infectedInput"
+        ).value
+    );
+
+    bridgePeople = parseInt(
+        document.getElementById(
+            "bridgeInput"
+        ).value
+    );
+
+    bridgeRadius = parseInt(
+        document.getElementById(
+            "bridgeRadiusInput"
+        ).value
+    );
+
+    infectionChance = parseFloat(
+        document.getElementById(
+            "infectionInput"
+        ).value
+    );
+
+    recoveryTime = parseInt(
+        document.getElementById(
+            "recoveryInput"
+        ).value
+    );
+
+    speed = parseInt(
+        document.getElementById(
+            "speedInput"
+        ).value
+    );
+
+    // SEGURETAT
+
+    maskEffect = parseInt(
+        document.getElementById(
+            "maskInput"
+        ).value
+    );
+
+    patiEffect = parseInt(
+        document.getElementById(
+            "patiInput"
+        ).value
+    );
+
+    ventilationEffect = parseInt(
+        document.getElementById(
+            "ventilationInput"
+        ).value
+    );
+
+    hygieneEffect = parseInt(
+        document.getElementById(
+            "hygieneInput"
+        ).value
+    );
+
+    updateInfectionInfo();
+    resetSimulation();
+}
+
+// ------------------------
+// EDITOR
+// ------------------------
+
+function setPaintMode(mode){
+
+    paintMode = mode;
+}
+
+canvas.addEventListener(
+    "click",
+    (e)=>{
+
+    const rect =
+    canvas.getBoundingClientRect();
+
+    const x = Math.floor(
+        (e.clientX-rect.left)
+        /
+        cellSize
+    );
+
+    const y = Math.floor(
+        (e.clientY-rect.top)
+        /
+        cellSize
+    );
+
+    if(
+        x>=0 &&
+        x<cols &&
+        y>=0 &&
+        y<rows
+    ){
+
+        if(paintMode==="bridge"){
+
+            grid[y][x].bridge =
+            !grid[y][x].bridge;
+        }
+        else{
+
+            grid[y][x].state =
+            paintMode;
+
+            if(
+                paintMode!=="infected"
+            ){
+
+                grid[y][x]
+                .infectionTime = 0;
+            }
+        }
+
+        drawGrid();
+    }
+});
+
+// ------------------------
+// INICI
+// ------------------------
+
+updateGridSize();
+
+createGrid();
+
+drawGrid();
+
+loop();
+
+</script>
+
+</body>
+</html> 

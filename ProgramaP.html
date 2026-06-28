@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Simulació Escola Epidemiològica</title>
+
+<style>
+
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    font-family:Arial;
+    text-align:center;
+}
+
+h1{
+    margin-top:10px;
+}
+
+canvas{
+    background:black;
+    border:2px solid white;
+    margin-top:10px;
+}
+
+.controls{
+    display:flex;
+    justify-content:center;
+    flex-wrap:wrap;
+    gap:15px;
+    margin-top:10px;
+}
+
+.panel{
+    background:#222;
+    padding:12px;
+    border-radius:10px;
+    min-width:220px;
+}
+
+button{
+    padding:8px 12px;
+    margin-top:8px;
+    cursor:pointer;
+}
+
+input{
+    width:80px;
+}
+
+.legend{
+    margin-top:10px;
+}
+
+.legend span{
+    margin-right:15px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Simulació Escola + Epidèmia</h1>
+
+<div class="legend">
+
+    <span style="color:#00ff88">
+        ■ Susceptible
+    </span>
+
+    <span style="color:red">
+        ■ Infectat
+    </span>
+
+    <span style="color:#3399ff">
+        ■ Recuperat
+    </span>
+
+    <span style="color:yellow">
+        ■ Persona Pont
+    </span>
+
+    <span style="color:orange">
+        ■ Persona Pont Infectada
+    </span>
+
+</div>
+
+<div class="controls">
+
+    <!-- CONFIGURACIÓ -->
+
+    <div class="panel">
+
+        <h3>Configuració</h3>
+
+        <label>
+            Classes X:
+            <input type="number"
+            id="classesXInput"
+            value="4">
+        </label>
+
+        <br>
+
+        <label>
+            Classes Y:
+            <input type="number"
+            id="classesYInput"
+            value="4">
+        </label>
+
+        <br>
+
+        <label>
+            Amplada classe:
+            <input type="number"
+            id="classWidthInput"
+            value="6">
+        </label>
+
+        <br>
+
+        <label>
+            Alçada classe:
+            <input type="number"
+            id="classHeightInput"
+            value="5">
+        </label>
+
+        <br>
+
+        <label>
+            Infectats inicials:
+            <input type="number"
+            id="infectedInput"
+            value="5">
+        </label>
+
+        <br>
+
+        <label>
+            Persones pont:
+            <input type="number"
+            id="bridgeInput"
+            value="8">
+        </label>
+
+        <br>
+
+        <label>
+            Radi persones pont:
+            <input type="number"
+            id="bridgeRadiusInput"
+            value="8">
+        </label>
+
+        <br>
+
+        <label>
+            Probabilitat infecció:
+            <input type="number"
+            step="0.01"
+            id="infectionInput"
+            value="0.25">
+        </label>
+
+        <br>
+
+        <label>
+            Temps recuperació:
+            <input type="number"
+            id="recoveryInput"
+            value="40">
+        </label>
+
+        <br>
+
+        <label>
+            Velocitat(ms):
+            <input type="number"
+            id="speedInput"
+            value="120">
+        </label>
+
+        <br>
+
+        <button onclick="applySettings()">
+            Aplicar Configuració
+        </button>
+
+    </div>
+
+    <!-- MESURES SEGURETAT -->
+
+    <div class="panel">
+
+        <h3>Mesures Seguretat</h3>
+
+        <label>
+            Mascaretes (%):
+            <input type="number"
+            id="maskInput"
+            value="50">
+        </label>
+
+        <br>
+
+        <label>
+            Distància social (%):
+            <input type="number"
+            id="distanceInput"
+            value="30">
+        </label>
+
+        <br>
+
+        <label>
+            Ventilació (%):
+            <input type="number"
+            id="ventilationInput"
+            value="40">
+        </label>
+
+        <br>
+
+        <label>
+            Higiene (%):
+            <input type="number"
+            id="hygieneInput"
+            value="20">
+        </label>
+
+    </div>
+
+    <!-- SIMULACIÓ -->
+
+    <div class="panel">
+
+        <h3>Simulació</h3>
+
+        <button onclick="toggleSimulation()">
+            Play / Pause
+        </button>
+
+        <br>
+
+        <button onclick="resetSimulation()">
+            Reiniciar
+        </button>
+
+    </div>
+
+    <!-- EDITOR -->
+
+    <div class="panel">
+
+        <h3>Editor</h3>
+
+        <button onclick="setPaintMode('susceptible')">
+            Susceptible
+        </button>
+
+        <br>
+
+        <button onclick="setPaintMode('infected')">
+            Infectat
+        </button>
+
+        <br>
+
+        <button onclick="setPaintMode('recovered')">
+            Recuperat
+        </button>
+
+        <br>
+
+        <button onclick="setPaintMode('bridge')">
+            Persona Pont
+        </button>
+
+    </div>
+
+</div>
+
+<canvas id="canvas"></canvas>
+
+<script>
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let cellSize = 25;
+
+// ------------------------
+// CONFIGURACIÓ
+// ------------------------
+
+let classesX = 4;
+let classesY = 4;
+
+let classroomWidth = 6;
+let classroomHeight = 5;
+
+let cols;
+let rows;
+
+let running = false;
+
+let infectionChance = 0.25;
+
+let recoveryTime = 40;
+
+let speed = 120;
+
+let initialInfected = 5;
+
+let bridgePeople = 5;
+
+let bridgeRadius = 3;
+
+// SEGURETAT
+
+let maskEffect = 50;
+
+let distanceEffect = 30;
+
+let ventilationEffect = 40;
+
+let hygieneEffect = 20;
+
+let paintMode = "infected";
+
+let grid = [];
+
+// ------------------------
+// ACTUALITZAR GRAELLA
+// ------------------------
+
+function updateGridSize(){
+
+    cols = classroomWidth * classesX;
+
+    rows = classroomHeight * classesY;
+
+    canvas.width = cols * cellSize;
+
+    canvas.height = rows * cellSize;
+}
+
+// ------------------------
+// CREAR GRAELLA
+// ------------------------
+
+function createGrid(){
+
+    grid = [];
+
+    for(let y=0;y<rows;y++){
+
+        let row = [];
+
+        for(let x=0;x<cols;x++){
+
+            row.push({
+                state:"susceptible",
+                infectionTime:0,
+                bridge:false
+            });
+        }
+
+        grid.push(row);
+    }
+
+    // PERSONES PONT
+
+    for(let i=0;i<bridgePeople;i++){
+
+        const rx =
+        Math.floor(Math.random()*cols);
+
+        const ry =
+        Math.floor(Math.random()*rows);
+
+        grid[ry][rx].bridge = true;
+    }
+
+    // INFECTATS INICIALS
+
+    for(let i=0;i<initialInfected;i++){
+
+        const rx =
+        Math.floor(Math.random()*cols);
+
+        const ry =
+        Math.floor(Math.random()*rows);
+
+        grid[ry][rx].state = "infected";
+    }
+}
+
+// ------------------------
+// DIBUIXAR
+// ------------------------
+
+function drawGrid(){
+
+    ctx.clearRect(
+        0,
+        0,
+        canvas.width,
+        canvas.height
+    );
+
+    for(let y=0;y<rows;y++){
+
+        for(let x=0;x<cols;x++){
+
+            const cell = grid[y][x];
+
+            // COLORS
+
+            if(cell.state==="susceptible"){
+                ctx.fillStyle="#00ff88";
+            }
+
+            if(cell.state==="infected"){
+                ctx.fillStyle="red";
+            }
+
+            if(cell.state==="recovered"){
+                ctx.fillStyle="#3399ff";
+            }
+
+            // PERSONES PONT
+
+            if(cell.bridge){
+
+                if(cell.state==="infected"){
+                    ctx.fillStyle="orange";
+                }
+                else{
+                    ctx.fillStyle="yellow";
+                }
+            }
+
+            ctx.fillRect(
+                x*cellSize,
+                y*cellSize,
+                cellSize-1,
+                cellSize-1
+            );
+        }
+    }
+
+    drawClassrooms();
+}
+
+// ------------------------
+// DIBUIXAR CLASSES
+// ------------------------
+
+function drawClassrooms(){
+
+    ctx.strokeStyle="white";
+
+    ctx.lineWidth=3;
+
+    for(
+        let x=0;
+        x<=cols;
+        x+=classroomWidth
+    ){
+
+        ctx.beginPath();
+
+        ctx.moveTo(x*cellSize,0);
+
+        ctx.lineTo(
+            x*cellSize,
+            canvas.height
+        );
+
+        ctx.stroke();
+    }
+
+    for(
+        let y=0;
+        y<=rows;
+        y+=classroomHeight
+    ){
+
+        ctx.beginPath();
+
+        ctx.moveTo(0,y*cellSize);
+
+        ctx.lineTo(
+            canvas.width,
+            y*cellSize
+        );
+
+        ctx.stroke();
+    }
+}
+
+// ------------------------
+// PROPAGACIÓ
+// ------------------------
+
+function spreadInfection(){
+
+    let newGrid = structuredClone(grid);
+
+    for(let y=0;y<rows;y++){
+
+        for(let x=0;x<cols;x++){
+
+            const cell = grid[y][x];
+
+            if(cell.state==="infected"){
+
+                // TEMPS INFECCIÓ
+
+                newGrid[y][x]
+                .infectionTime++;
+
+                // RECUPERACIÓ
+
+                if(
+                    newGrid[y][x]
+                    .infectionTime
+                    >=
+                    recoveryTime
+                ){
+
+                    newGrid[y][x]
+                    .state =
+                    "recovered";
+                }
+
+                // ESCANEJAR VEÏNS
+
+                for(let ny=0;ny<rows;ny++){
+
+                    for(let nx=0;nx<cols;nx++){
+
+                        if(nx===x && ny===y){
+                            continue;
+                        }
+
+                        const target =
+                        grid[ny][nx];
+
+                        // DISTÀNCIA
+
+                        const distance =
+                        Math.sqrt(
+                            (nx-x)*(nx-x)
+                            +
+                            (ny-y)*(ny-y)
+                        );
+
+                        // mateixa aula?
+
+                        const sameClassroom =
+
+                        Math.floor(
+                            nx/classroomWidth
+                        )
+
+                        ===
+
+                        Math.floor(
+                            x/classroomWidth
+                        )
+
+                        &&
+
+                        Math.floor(
+                            ny/classroomHeight
+                        )
+
+                        ===
+
+                        Math.floor(
+                            y/classroomHeight
+                        );
+
+                        let canSpread = false;
+
+                        // PERSONES NORMALS
+
+                        if(sameClassroom){
+
+                            if(distance <= 1.5){
+
+                                canSpread = true;
+                            }
+                        }
+
+                        // PERSONES PONT
+
+                        if(cell.bridge){
+
+                            if(
+                                distance
+                                <=
+                                bridgeRadius
+                            ){
+
+                                canSpread = true;
+                            }
+                        }
+
+                        // CONTAGI
+
+                        if(canSpread){
+
+                            if(
+                                target.state
+                                ===
+                                "susceptible"
+                            ){
+
+                                // ----------------
+                                // SEGURETAT
+                                // ----------------
+
+                                let finalProbability =
+                                infectionChance;
+
+                                // mascaretes
+                                finalProbability *=
+                                (
+                                    1 -
+                                    (maskEffect/100)
+                                    *0.5
+                                );
+
+                                // distància
+                                finalProbability *=
+                                (
+                                    1 -
+                                    (distanceEffect/100)
+                                    *0.4
+                                );
+
+                                // ventilació
+                                finalProbability *=
+                                (
+                                    1 -
+                                    (ventilationEffect/100)
+                                    *0.3
+                                );
+
+                                // higiene
+                                finalProbability *=
+                                (
+                                    1 -
+                                    (hygieneEffect/100)
+                                    *0.2
+                                );
+
+                                if(
+                                    finalProbability < 0
+                                ){
+                                    finalProbability = 0;
+                                }
+
+                                // infectar
+
+                                if(
+                                    Math.random()
+                                    <
+                                    finalProbability
+                                ){
+
+                                    newGrid[ny][nx]
+                                    .state =
+                                    "infected";
+
+                                    newGrid[ny][nx]
+                                    .infectionTime = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    grid = newGrid;
+}
+
+// ------------------------
+// LOOP
+// ------------------------
+
+function loop(){
+
+    if(running){
+
+        spreadInfection();
+
+        drawGrid();
+    }
+
+    setTimeout(()=>{
+
+        requestAnimationFrame(loop);
+
+    },speed);
+}
+
+// ------------------------
+// CONTROLS
+// ------------------------
+
+function toggleSimulation(){
+
+    running = !running;
+}
+
+function resetSimulation(){
+
+    updateGridSize();
+
+    createGrid();
+
+    drawGrid();
+}
+
+function applySettings(){
+
+    classesX = parseInt(
+        document.getElementById(
+            "classesXInput"
+        ).value
+    );
+
+    classesY = parseInt(
+        document.getElementById(
+            "classesYInput"
+        ).value
+    );
+
+    classroomWidth = parseInt(
+        document.getElementById(
+            "classWidthInput"
+        ).value
+    );
+
+    classroomHeight = parseInt(
+        document.getElementById(
+            "classHeightInput"
+        ).value
+    );
+
+    initialInfected = parseInt(
+        document.getElementById(
+            "infectedInput"
+        ).value
+    );
+
+    bridgePeople = parseInt(
+        document.getElementById(
+            "bridgeInput"
+        ).value
+    );
+
+    bridgeRadius = parseInt(
+        document.getElementById(
+            "bridgeRadiusInput"
+        ).value
+    );
+
+    infectionChance = parseFloat(
+        document.getElementById(
+            "infectionInput"
+        ).value
+    );
+
+    recoveryTime = parseInt(
+        document.getElementById(
+            "recoveryInput"
+        ).value
+    );
+
+    speed = parseInt(
+        document.getElementById(
+            "speedInput"
+        ).value
+    );
+
+    // SEGURETAT
+
+    maskEffect = parseInt(
+        document.getElementById(
+            "maskInput"
+        ).value
+    );
+
+    distanceEffect = parseInt(
+        document.getElementById(
+            "distanceInput"
+        ).value
+    );
+
+    ventilationEffect = parseInt(
+        document.getElementById(
+            "ventilationInput"
+        ).value
+    );
+
+    hygieneEffect = parseInt(
+        document.getElementById(
+            "hygieneInput"
+        ).value
+    );
+
+    resetSimulation();
+}
+
+// ------------------------
+// EDITOR
+// ------------------------
+
+function setPaintMode(mode){
+
+    paintMode = mode;
+}
+
+canvas.addEventListener(
+    "click",
+    (e)=>{
+
+    const rect =
+    canvas.getBoundingClientRect();
+
+    const x = Math.floor(
+        (e.clientX-rect.left)
+        /
+        cellSize
+    );
+
+    const y = Math.floor(
+        (e.clientY-rect.top)
+        /
+        cellSize
+    );
+
+    if(
+        x>=0 &&
+        x<cols &&
+        y>=0 &&
+        y<rows
+    ){
+
+        if(paintMode==="bridge"){
+
+            grid[y][x].bridge =
+            !grid[y][x].bridge;
+        }
+        else{
+
+            grid[y][x].state =
+            paintMode;
+
+            if(
+                paintMode!=="infected"
+            ){
+
+                grid[y][x]
+                .infectionTime = 0;
+            }
+        }
+
+        drawGrid();
+    }
+});
+
+// ------------------------
+// INICI
+// ------------------------
+
+updateGridSize();
+
+createGrid();
+
+drawGrid();
+
+loop();
+
+</script>
+
+</body>
+</html> 
