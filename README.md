@@ -8,7 +8,4 @@ El simulador ha estat desenvolupat amb HTML, CSS i JavaScript, i està pensat co
 L’objectiu principal del projecte és analitzar i visualitzar com es propaga una malaltia infecciosa en un entorn escolar, així com estudiar com factors com la infectivitat, el contacte entre individus i les mesures de seguretat influeixen en l’evolució del contagi.
 
 
-(Si no es disposa de cap compilador per executal el programa, copia tot el codi amb Ctrl + a del fitxer FINAL.html, dirigeix-te a https://onecompiler.com/html, borra el que hi ha a les tres pestanyes (index.html, style.css i script.js) i enganxa el codi copiat a la pestanya "index.html" de la web.)
-
-
 --- Arnau Camprubí Casasayas, 2026
